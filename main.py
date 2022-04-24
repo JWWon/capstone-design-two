@@ -10,7 +10,7 @@ import pygame
 def main():
     leye = cv2.CascadeClassifier('pre_trained/haarcascade_lefteye_2splits.xml')
     reye = cv2.CascadeClassifier('pre_trained/haarcascade_righteye_2splits.xml')
-    model = load_model('model/transformed_weight.h5')
+    model = load_model('model/extended_weight.h5')
     pygame.mixer.init()
     warning_sound = pygame.mixer.Sound('asset/windsheld.mp3')
     danger_sound = pygame.mixer.Sound('asset/pullup.mp3')
@@ -26,7 +26,6 @@ def main():
     both_eyes_closed_count = 0
 
     def get_eye_open(frame, bound) -> bool:
-        nonlocal model
         for (x,y,w,h) in bound:
             eye = frame[y:y+h, x:x+w] 
             cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0), 2) # Paint eye bound box
@@ -37,7 +36,6 @@ def main():
             eye = np.expand_dims(eye, axis=0)
             pred = model.predict_classes(eye) 
             return True if pred[0] == 1 else False
-        return False
 
     while True:
         frame = video.read()
@@ -51,7 +49,9 @@ def main():
 
         left_eye_open = get_eye_open(frame, left_eye)
         right_eye_open = get_eye_open(frame, right_eye)
-        both_eyes_closed = not left_eye_open and not right_eye_open
+        both_eyes_closed = False
+        if left_eye_open != None or right_eye_open != None:
+            both_eyes_closed = not left_eye_open and not right_eye_open
 
         if both_eyes_closed:
             both_eyes_closed_count += 1
