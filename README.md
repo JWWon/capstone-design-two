@@ -12,6 +12,12 @@
    ~$ conda activate {any_names_you_want}
    ```
 
+3. Install some packages manually
+
+   ```bash
+   ~$ pip install pygame
+   ```
+
 # Dataset
 
 https://www.kaggle.com/datasets/kutaykutlu/drowsiness-detection
