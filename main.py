@@ -1,8 +1,10 @@
 import cv2
-import imutils
-from keras.models import load_model
 import numpy as np
+import light_remover as lr
+import imutils
 from imutils.video import VideoStream
+from keras.models import load_model
+
 
 def main():
   leye = cv2.CascadeClassifier('pre_trained/haarcascade_lefteye_2splits.xml')
@@ -12,12 +14,24 @@ def main():
   video = VideoStream(src=0).start()
   
   font = cv2.FONT_HERSHEY_COMPLEX_SMALL
+  target_size = (24,24)
   
-  count=0
   score=0
   thicc=2
-  rpred=[99]
-  lpred=[99]
+
+  def get_eye_open(frame, bound) -> bool:
+    nonlocal model
+    for (x,y,w,h) in bound:
+      eye = frame[y:y+h, x:x+w] 
+      cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0), 2) # Paint eye bound box
+      eye = cv2.cvtColor(eye, cv2.COLOR_BGR2GRAY) # (-1,-1,3) -> (-1,-1,1)
+      eye = cv2.resize(eye, target_size) 
+      eye = eye/255
+      eye = eye.reshape(24, 24, -1)
+      eye = np.expand_dims(eye, axis=0)
+      pred = model.predict_classes(eye) 
+      return True if pred[0] == 1 else False
+    return False
 
   while(True):
       frame = video.read()
@@ -30,41 +44,17 @@ def main():
       right_eye =  reye.detectMultiScale(gray)
 
       cv2.rectangle(frame, (0,height-50) , (200,height) , (255,0,0) , thickness=cv2.FILLED )
+      target_size = (24,24)
 
-      for (x,y,w,h) in right_eye:# 오른쪽 ROI 영역 생성
-          r_eye=frame[y:y+h,x:x+w]
-          cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
-          count=count+1
-          r_eye = cv2.cvtColor(r_eye,cv2.COLOR_BGR2GRAY)
-          r_eye = cv2.resize(r_eye,(24,24)) #학습시킨 데이터를 (24,24)로 처리했기 때문에 
-          r_eye= r_eye/255
-          r_eye=  r_eye.reshape(24,24,-1)
-          r_eye = np.expand_dims(r_eye,axis=0)
-          rpred = model.predict_classes(r_eye) # 'Open' if rpred[0] == 1 else 'Closed'
-          break
+      left_eye_open = get_eye_open(frame, left_eye)
+      right_eye_open = get_eye_open(frame, right_eye)
 
-      for (x,y,w,h) in left_eye:# 왼쪽 ROI 영역 생성
-          l_eye=frame[y:y+h,x:x+w]
-          cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
-          count=count+1
-          l_eye = cv2.cvtColor(l_eye,cv2.COLOR_BGR2GRAY)  
-          l_eye = cv2.resize(l_eye,(24,24))
-          l_eye= l_eye/255
-          l_eye=l_eye.reshape(24,24,-1)
-          l_eye = np.expand_dims(l_eye,axis=0)
-          lpred = model.predict_classes(l_eye) # 'Open' if lpred[0] == 1 else 'Closed'
-          break
-      
-
-      if(rpred[0]==0 and lpred[0]==0): 
-          #왼쪽눈과 오른쪽눈 다 닫혀있을 경우
-          score=score+1
-          cv2.putText(frame,"Closed",(10,height-20), font, 1,(255,255,255),1,cv2.LINE_AA)
-      # if(rpred[0]==1 or lpred[0]==1):
+      if not left_eye_open and not right_eye_open:
+        score += 1
+        cv2.putText(frame, "Closed", (10,height-20), font, 1, (255,255,255), 1, cv2.LINE_AA)
       else:
-          score=score-1
-          cv2.putText(frame,"Open",(10,height-20), font, 1,(255,255,255),1,cv2.LINE_AA)
-
+        score -= 1
+        cv2.putText(frame, "Open", (10,height-20), font, 1, (255,255,255), 1, cv2.LINE_AA)
 
       if score < 0:
           #눈을 뜨고 있을 경우
