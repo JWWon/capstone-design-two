@@ -10,7 +10,7 @@ import pygame
 def main():
     leye = cv2.CascadeClassifier('pre_trained/haarcascade_lefteye_2splits.xml')
     reye = cv2.CascadeClassifier('pre_trained/haarcascade_righteye_2splits.xml')
-    model = load_model('model/weight.h5')
+    model = load_model('model/transformed_weight.h5')
     pygame.mixer.init()
     warning_sound = pygame.mixer.Sound('asset/windsheld.mp3')
     danger_sound = pygame.mixer.Sound('asset/pullup.mp3')
