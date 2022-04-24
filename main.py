@@ -38,7 +38,7 @@ def main():
       frame = imutils.resize(frame, width=640)
       height, width = frame.shape[:2] 
 
-      gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+      L, gray = lr.light_removing(frame)
 
       left_eye = leye.detectMultiScale(gray)
       right_eye =  reye.detectMultiScale(gray)
