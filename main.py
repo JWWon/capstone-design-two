@@ -1,23 +1,15 @@
 import cv2
-import os
+import imutils
 from keras.models import load_model
 import numpy as np
-import time
+from imutils.video import VideoStream
 
 def main():
-  face = cv2.CascadeClassifier('pre_trained/haarcascade_frontalface_alt.xml')
-  # 얼굴 검출기
   leye = cv2.CascadeClassifier('pre_trained/haarcascade_lefteye_2splits.xml')
-  # 왼쪽 눈 검출
   reye = cv2.CascadeClassifier('pre_trained/haarcascade_righteye_2splits.xml')
 
   model = load_model('model/weight.h5')
-  path = os.getcwd()
-
-  lbl=['Close','Open'] # 눈을 감았는지 떳는지 두가지로 분류하면 댐
-
-  cap = cv2.VideoCapture(0)
-  # 실시간 웹캠 영상 실행 (0이 실시간이라는 뜻)
+  video = VideoStream(src=0).start()
   
   font = cv2.FONT_HERSHEY_COMPLEX_SMALL
   
@@ -28,19 +20,16 @@ def main():
   lpred=[99]
 
   while(True):
-      ret, frame = cap.read()
-      height,width = frame.shape[:2] 
+      frame = video.read()
+      frame = imutils.resize(frame, width=640)
+      height, width = frame.shape[:2] 
 
       gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-      faces = face.detectMultiScale(gray,minNeighbors=5,scaleFactor=1.1,minSize=(25,25))
       left_eye = leye.detectMultiScale(gray)
       right_eye =  reye.detectMultiScale(gray)
 
       cv2.rectangle(frame, (0,height-50) , (200,height) , (255,0,0) , thickness=cv2.FILLED )
-
-      for (x,y,w,h) in faces: #얼굴 ROI 영역 생성
-          cv2.rectangle(frame, (x,y) , (x+w,y+h) , (0,0,255) , 1 )
 
       for (x,y,w,h) in right_eye:# 오른쪽 ROI 영역 생성
           r_eye=frame[y:y+h,x:x+w]
@@ -51,12 +40,7 @@ def main():
           r_eye= r_eye/255
           r_eye=  r_eye.reshape(24,24,-1)
           r_eye = np.expand_dims(r_eye,axis=0)
-          rpred = model.predict_classes(r_eye)
-          
-          if(rpred[0]==1):
-              lbl='Open' 
-          if(rpred[0]==0):
-              lbl='Closed'
+          rpred = model.predict_classes(r_eye) # 'Open' if rpred[0] == 1 else 'Closed'
           break
 
       for (x,y,w,h) in left_eye:# 왼쪽 ROI 영역 생성
@@ -68,12 +52,7 @@ def main():
           l_eye= l_eye/255
           l_eye=l_eye.reshape(24,24,-1)
           l_eye = np.expand_dims(l_eye,axis=0)
-          lpred = model.predict_classes(l_eye)
-          
-          if(lpred[0]==1):
-              lbl='Open'   
-          if(lpred[0]==0):
-              lbl='Closed'
+          lpred = model.predict_classes(l_eye) # 'Open' if lpred[0] == 1 else 'Closed'
           break
       
 
@@ -115,8 +94,8 @@ def main():
       cv2.imshow('frame',frame)
       if cv2.waitKey(1) & 0xFF == ord('q'):
           break
-  cap.release()
   cv2.destroyAllWindows()    
+  video.stop()
 
 if __name__ == '__main__':
   main()
