@@ -20,12 +20,10 @@ def main():
     # const
     font = cv2.FONT_HERSHEY_COMPLEX_SMALL
     target_size = (24,24)
-    activate_threshold = 15
 
     # variable
     status = 0 # 0: stay awake, 1: drowsy, 2: sleep
     both_eyes_closed_count = 0
-    thickness = 2
 
     def get_eye_open(frame, bound) -> bool:
         nonlocal model
@@ -62,21 +60,23 @@ def main():
         cv2.putText(frame, "Closed" if both_eyes_closed else "Open", (10, height-20), font, 1, (255,255,255), 1, cv2.LINE_AA)
 
         cv2.putText(frame, f"Count: {both_eyes_closed_count}", (100, height-20), font, 1, (255,255,255), 1, cv2.LINE_AA)
-        if both_eyes_closed_count > activate_threshold:
-            if status == 0:
-                warning_sound.play(-1)
 
-            if thickness < 16:
-                thickness += 2
-            else:
-                thickness = max(thickness - 2, 2)
-
-            cv2.rectangle(frame, (0,0), (width,height), (0,0,255), thickness) 
-            status = 1
-        else:
-            if 0 < status:
+        if both_eyes_closed_count < 15:
+            if status != 0:
                 warning_sound.stop()
             status = 0
+        elif both_eyes_closed_count < 50:
+            if status != 1:
+                danger_sound.stop()
+                warning_sound.play(-1)
+            cv2.rectangle(frame, (0,0), (width,height), (0,0,255), both_eyes_closed_count // 5) 
+            status = 1
+        else:
+            if status != 2:
+                warning_sound.stop()
+                danger_sound.play(-1)
+            cv2.rectangle(frame, (0,0), (width,height), (0,0,255), 20) 
+            status = 2
 
         cv2.imshow('frame', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
